@@ -118,9 +118,9 @@ class GA( object ):
 
 	def duplicate( self, chromosomes:List[np.ndarray], weights:List[float], nDup:int ):
 
-		chosenPop = random.choices( chromosomes, weights=weights, k = nDup )
+		chosenPop = np.random.choice( len(chromosomes), p=weights, size = nDup )
 
-		return [ chro.copy() for chro in chosenPop ]
+		return [ chromosomes[i].copy() for i in chosenPop ]
 
 	def mutate( self, chromosomes:List[np.ndarray], mutateRate:float, mutateAmount:float ):
 
