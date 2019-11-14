@@ -142,9 +142,10 @@ class GA( object ):
 		for _ in range( nChild ):
 
 			chosen = random.choices( chromosomes, weights=weights, k = 2 )
+			chosen = np.random.choice( len(chromosomes), p=weights, size = 2 )
 
-			father = chosen[0]
-			mother = chosen[1]
+			father = chromosomes[chosen[0]]
+			mother = chromosomes[chosen[1]]
 
 			nWeight = len( father )
 
