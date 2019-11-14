@@ -13,56 +13,7 @@ import os, sys, glob
 import configparser
 import pprint
 
-def predToInput( pred:np.ndarray ):
-	
-	index = np.argmax( pred )
-	return index + 1
-
-def agentFactory( nnConstruct, chromosome = None ):
-
-	stack = []
-
-	lookup = {'lstm':LSTM, 'mlp':MLP}
-
-	for nnType, args, kwargs in nnConstruct:
-		stack.append( lookup[nnType](*args, **kwargs) )
-
-	nn = Sequential( stack )
-
-	if chromosome is not None:
-		nn.setWeight( chromosome )
-
-	return nn
-
-def loadConfig( path ):
-
-	config = configparser.ConfigParser( )
-	config.read( path )
-
-	index = 1
-
-	nnConstruct = []
-
-	while True:
-		if str(index) in config['Network']:
-			nnConstruct.append( eval( config['Network'][str(index)] ) )
-
-		else:
-			break
-		
-		index += 1
-
-	gaConfig  = {}
-
-	gaConfig['survivalRatio'] = float(config['GA']['survivalRatio'])
-	gaConfig['duplicateRation'] = float(config['GA']['duplicateRation'])
-	gaConfig['mutationRate'] = float(config['GA']['mutationRate'])
-	gaConfig['mutationAmount'] = float(config['GA']['mutationAmount'])
-	gaConfig['seed'] = int(config['GA']['seed'])
-
-	maxIter = int(config['ITER']['iter'])
-
-	return nnConstruct, gaConfig, maxIter
+from utils import loadConfig, agentFactory, predToInput, saveBackup, saveIter
 
 nnConstruct, gaConfig, maxIter = loadConfig( './config_mlp.ini' )
 
@@ -94,22 +45,9 @@ for i in range( it, maxIter ):
 	pop = sorted( pop, key=lambda x: x[0], reverse=True)
 
 	if i % 10 == 0:
-		with open( os.path.join( './modelSnake', 'iter_{}'.format( i ) ), 'wb') as f:
-			pickle.dump( pop[:10], f )
-		
-		with open( os.path.join( './modelSnake', 'iter_score_{}'.format( i ) ), 'wb') as f:
-			pickle.dump( pop[:10], f )
+		saveIter( pop, i, './modelSnake_lstm' )
 
-	try:
-		print( "Saving.." )
-		with open( os.path.join( './modelSnake', 'backup' ), 'wb') as f:
-			pickle.dump( {"iter":i, "pop":pop}, f )
-	except KeyboardInterrupt:
-		with open( os.path.join( './modelSnake', 'backup' ), 'wb') as f:
-			pickle.dump( {"iter":i, "pop":pop}, f )
-	finally:
-		with open( os.path.join( './modelSnake', 'backup' ), 'wb') as f:
-			pickle.dump( {"iter":i, "pop":pop}, f )
+	saveBackup('./modelSnake_lstm', pop, i  )
 
 	print( "HIGHEST: ", max(pop, key = lambda x : x[0] )[0] )
 	print( "avg: ", sum( [p[0] for p in pop] ) )
