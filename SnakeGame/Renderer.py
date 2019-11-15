@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import time
 
 class AbstractRenderer( object ):
 
@@ -62,3 +63,25 @@ class cv2Renderer( AbstractRenderer ):
 		y2 = y + self._pixPerTile
 
 		return x, y, x2, y2
+
+class NoGUIRenderer( AbstractRenderer ):
+
+	def clear(self):
+		super( NoGUIRenderer, self ).clear()
+		print( "\033[2J" )
+
+	def setRefreshRate( self, a ):
+		pass
+
+	def render( self ):
+		lookup={255:'#',127:'*',200:'@'}
+		string = "\033[{};{}H{}"
+		for xx in range( self._pixelVal.shape[0] ):
+			for yy in range( self._pixelVal.shape[1] ):
+				val = self._pixelVal[yy,xx]
+				if val not in lookup:
+					continue
+
+				s = string.format(xx+4,yy+4,lookup[val])
+				print( s )
+		time.sleep(0.2)
