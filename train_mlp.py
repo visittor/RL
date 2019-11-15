@@ -44,10 +44,10 @@ for i in range( it, maxIter ):
 
 	pop = sorted( pop, key=lambda x: x[0], reverse=True)
 
-	if i % 10 == 0:
-		saveIter( pop, i, './modelSnake_lstm' )
+	if i % 25 == 0:
+		saveIter( pop, i, './modelSnake' )
 
-	saveBackup('./modelSnake_lstm', pop, i  )
+	saveBackup('./modelSnake', pop, i  )
 
 	print( "HIGHEST: ", max(pop, key = lambda x : x[0] )[0] )
 	print( "avg: ", sum( [p[0] for p in pop] ) )

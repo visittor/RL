@@ -44,7 +44,7 @@ for i in range( it, maxIter ):
 
 	pop = sorted( pop, key=lambda x: x[0], reverse=True)
 
-	if i % 10 == 0:
+	if i % 25 == 0:
 		saveIter( pop, i, './modelSnake_lstm' )
 
 	saveBackup('./modelSnake_lstm', pop, i  )
