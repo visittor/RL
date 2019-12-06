@@ -15,7 +15,7 @@ class GA( object ):
 
 		self._predictToInputFunc = predictToInputFunc
 
-	def testOneAgent( self, agent:BaseNetwork, render:bool=False, maxIter:int=50 )->float:
+	def testOneAgent( self, agent:BaseNetwork, render:bool=False, maxIter:int=100 )->float:
 
 		self._envi.startEnvi()
 		agent.resetState()
