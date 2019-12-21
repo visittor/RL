@@ -4,9 +4,9 @@ from .Variable import Variable, Constant, PlaceHolder, Trainable
 
 from typing import List
 
-def getGraphExecutionOrder( component: GraphComponent )->List[GraphComponent]:
+def getGraphExecutionOrder( components: List[GraphComponent] )->List[GraphComponent]:
 
-	componentsList = []
+	orderedComponentsList = []
 
 	def addComponent( component: GraphComponent ):
 
@@ -14,18 +14,23 @@ def getGraphExecutionOrder( component: GraphComponent )->List[GraphComponent]:
 			for input in component.getInput():
 				addComponent( input )
 
-		componentsList.append( component )
+		if component in orderedComponentsList:
+			return
 
-	addComponent( component )
+		orderedComponentsList.append( component )
 
-	return componentsList
+	for component in components:
+
+		addComponent( component )
+
+	return orderedComponentsList
 
 class Session( object ):
 
 	def __init__( self ):
 		pass
 
-	def run( self, result:GraphComponent, feedDict = None ):
+	def run( self, result:List[GraphComponent], feedDict = None ):
 
 		feedDict = feedDict if feedDict is not None else {}
 
@@ -39,7 +44,7 @@ class Session( object ):
 			elif isinstance( component, Node ):
 				self._handleNode( component )
 
-		return result.getOutput()
+		return [ r.getOutput() for r in result ]
 
 	def _handleVariable( self, var:Variable, feedDict ):
 

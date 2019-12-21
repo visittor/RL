@@ -3,3 +3,4 @@ modelSnake_lstm/iter_*
 modelSnake_lstm/backup
 modelSnake/iter_*
 modelSnake/backup
+.vscode/settings.json
