@@ -1,8 +1,8 @@
 from NeuralNetwork.CoreObject.Variable import PlaceHolder, Constant, Trainable
-from NeuralNetwork.Operation.Basic import Multiply, Add, Substract, MatMul
+from NeuralNetwork.Opt.Operation.Basic import Multiply, Add, Substract, MatMul
 from NeuralNetwork.CoreObject.Session import Session
 
-from NeuralNetwork.Operation.Gradient import gradients
+from NeuralNetwork.Opt.Operation.Gradient import gradients
 
 import numpy as np
 

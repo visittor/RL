@@ -2,7 +2,7 @@ import os
 print(os.environ['PYTHONPATH'].split(os.pathsep))
 
 from NeuralNetwork.CoreObject.Variable import PlaceHolder, Constant, Trainable
-from NeuralNetwork.Operation.Basic import Multiply, Add, Substract, MatMul
+from NeuralNetwork.Opt.Operation.Basic import Multiply, Add, Substract, MatMul
 from NeuralNetwork.CoreObject.Session import Session
 
 import numpy as np

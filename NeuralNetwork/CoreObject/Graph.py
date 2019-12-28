@@ -8,3 +8,6 @@ class Graph( object ):
 		self.node = []
 
 _default_graph = Graph()
+
+def getAllTrainable( ):
+	return _default_graph.trainable

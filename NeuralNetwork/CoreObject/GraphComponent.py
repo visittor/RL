@@ -8,11 +8,18 @@ _idGenerator = IDGenerator()
 
 class GraphComponent( object ):
 
+	def __new__( cls, *args, **kwargs ):
+
+		instance = super( GraphComponent, cls ).__new__( cls )
+		instance._id = next( _idGenerator )
+
+		return instance
+
 	def __init__( self, name: str = None ):
 
 		self._output: np.ndarray = np.array([])
 
-		self._id = next( _idGenerator )
+		# self._id = next( _idGenerator )
 		self._name = name if name is not None else str( self._id )
 
 	def getOutput( self )->np.ndarray:

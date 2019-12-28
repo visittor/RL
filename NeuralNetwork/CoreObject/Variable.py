@@ -31,6 +31,18 @@ class Variable( GraphComponent ):
 		return self._shape
 
 class Constant( Variable ):
+	__INSTANCE = {}
+
+	def __new__( cls, shape, value:np.ndarray, **kwargs ):
+
+		if (shape, value.tobytes()) in cls.__INSTANCE:
+			return cls.__INSTANCE[ (shape, value.tobytes()) ]
+
+		instance = super( Constant, cls ).__new__( cls )
+		instance.__init__( shape, value, **kwargs )
+		cls.__INSTANCE[ (shape, value.tobytes()) ] = instance
+
+		return instance
 
 	def __init__( self, shape, value:np.ndarray, **kwargs ):
 		super( Constant, self ).__init__( shape, **kwargs )

@@ -1,10 +1,12 @@
-from ..CoreObject.Node import Node
-from ..CoreObject.GraphComponent import GraphComponent
-from ..CoreObject.Variable import Constant
+from NeuralNetwork.CoreObject.Node import Node
+from NeuralNetwork.CoreObject.GraphComponent import GraphComponent
+from NeuralNetwork.CoreObject.Variable import Constant
 
 import numpy as np
 
 from typing import List, Tuple
+from itertools import zip_longest
+from functools import reduce
 
 class Buffer( Node ):
 
@@ -44,7 +46,19 @@ class Transpose( Node ):
 		return [ Transpose( dL ) ]
 
 class MatMul( Node ):
-	
+
+	class __SumBroadCast( Node ):
+
+		def __init__( self, x, axis ):
+			self._axis = axis
+			super().__init__( inputs=[x] )
+		
+		def computeShape( self, shape ):
+			return tuple( shape[i] if i != self._axis else 1 for i in range(len(shape)) )
+
+		def forward( self, x:np.ndarray )->np.ndarray:
+			return np.sum( x, axis = self._axis )
+
 	def __init__( self, x:GraphComponent, y:GraphComponent,
 				**kwargs ):
 		super( MatMul, self ).__init__( inputs=[x, y], **kwargs )
@@ -79,21 +93,57 @@ class MatMul( Node ):
 	def backward( self, dL:GraphComponent )->List[GraphComponent]:
 
 		dX = MatMul( dL, Transpose(self._input[1]), name="diff_{}".format(self._input[0].name) )
+		if dX.shape != self._input[0].shape:
+			dX = self.__SumBroadCast( dX, 0 )
+
 		dY = MatMul( Transpose(self._input[0]), dL, name="diff_{}".format(self._input[1].name) )
+		print( "dY", dY.shape )
+		if dY.shape != self._input[1].shape:
+			print( "Do sum broad")
+			dY = self.__SumBroadCast( dY, 0 )
 
 		return [dX, dY]
 
-class Multiply( Node ):
+class ElementwiseMixin:
+
+	class __SumBroadCast( Node ):
+
+		def __init__( self, x, axis ):
+			self._axis = axis
+			super().__init__( inputs=[x] )
+		
+		def computeShape( self, shape ):
+			return tuple( shape[i] if i != self._axis else 1 for i in range(len(shape)) )
+
+		def forward( self, x:np.ndarray )->np.ndarray:
+			return np.sum( x, axis = self._axis )
+
+	def computeShape( self, shape1, shape2 )->Tuple[int]:
+		assert all( m==n or m==1 or n==1 for m,n in zip(shape1[::-1],shape2[::-1]) ), \
+				"Invalid shape"
+		
+		shape = tuple( 	m if m!=1 and n!= 1 else int(m*n) \
+						for m, n in zip_longest( shape1[::-1], shape2[::-1], fillvalue=1 ) )[::-1]
+
+		return shape
+
+	def doSumBroadcast( self, node:GraphComponent, inputShape, outputShape ):
+		doSumBroadCastAxe = None
+		for i, (sx, sl) in enumerate(zip_longest(inputShape[::-1], outputShape[::-1], fillvalue=1)):
+			if sl != sx and sx == 1:
+				doSumBroadCastAxe = max(len(inputShape), len(outputShape)) - i - 1
+				break
+		if doSumBroadCastAxe is not None:
+			dx = self.__SumBroadCast( node, doSumBroadCastAxe )
+			return dx
+
+		return node
+
+class Multiply( ElementwiseMixin, Node ):
 
 	def __init__( self, x:GraphComponent, y:GraphComponent,
 				**kwargs ):
 		super( Multiply, self ).__init__( inputs=[x, y], **kwargs )
-
-	def computeShape( self, shape1, shape2 )->Tuple[int]:
-		assert len(shape1) == len(shape2), "Invalid shape"
-		assert shape1 == shape2, "Invalid shape"
-
-		return shape1
 
 	def forward( self, x:np.ndarray, y:np.ndarray )->np.ndarray:
 		return np.multiply( x, y )
@@ -105,28 +155,75 @@ class Multiply( Node ):
 
 		return [dX, dY]
 
-class Add( Node ):
+class Power( Node ):
+
+	def __init__( self, x:GraphComponent, a:float, **kwargs ):
+		super().__init__( inputs=[x], **kwargs )
+		self._a = a
+	
+	def computeShape( self, shape1 )->Tuple[int]:
+		return shape1
+
+	def forward( self, x:np.ndarray )->np.ndarray:
+		return np.power( x, self._a )
+
+	def backward( self, dL:GraphComponent )->List[GraphComponent]:
+
+		d = Multiply( Constant((1,), np.array([self._a])),
+						Power(self._input[0], self._a - 1) )
+		return [ Multiply( dL, d, name="diff_{}".format(self._input[0].name) ) ]
+
+class Log( Node ):
+
+	def __init__( self, x:GraphComponent, **kwargs ):
+		super().__init__( inputs=[x], **kwargs )
+	
+	def computeShape( self, shape1 )->Tuple[int]:
+		return shape1
+
+	def forward( self, x:np.ndarray )->np.ndarray:
+		return np.log( x )
+
+	def backward( self, dL:GraphComponent )->List[GraphComponent]:
+		d = Divide( Constant((1,), np.array([1]) ), self._input[0] )
+		return [ Multiply( dL, d, name="diff_{}".format(self._input[0].name) ) ]
+
+class Divide( ElementwiseMixin, Node ):
+
+	def __init__( self, x:GraphComponent, y:GraphComponent, **kwargs ):
+		super().__init__( inputs=[x, y], **kwargs )
+
+	def forward( self, x:np.ndarray, y:np.ndarray )->np.ndarray:
+		return x / y
+
+	def backward( self, dL:GraphComponent )->List[GraphComponent]:
+
+		dx = Divide( Constant((1,), np.ones((1,))), self._input[1] )
+		dx = Multiply( dL, dx, name="diff_{}".format(self._input[0].name) )
+
+		dy = Multiply( Constant((1,), np.array([-1])),
+						Divide( self._input[0], Power(self._input[1], 2.0) ) )
+		dy = Multiply( dL, dy, name="diff_{}".format(self._input[1].name) )
+
+		return [dx, dy]
+
+class Add( ElementwiseMixin, Node ):
 
 	def __init__( self, x:GraphComponent, y:GraphComponent,
 				**kwargs ):
 		super( Add, self ).__init__( inputs=[x, y], **kwargs )
 
-	def computeShape( self, shape1, shape2 )->Tuple[int]:
-		assert len(shape1) == len(shape2) or len(shape1)-1 == len(shape2), "Invalid shape"
-		
-		if len(shape1) == len(shape2):
-			assert shape1 == shape2, "Invalid shape"
-			return shape1
-		
-		assert shape1[1:] == shape2, "Invalid shape"
-		return shape1
-
 	def forward( self, x:np.ndarray, y:np.ndarray )->np.ndarray:
 		return x + y
 
 	def backward( self, dL:GraphComponent )->List[GraphComponent]:
-		d = Buffer( dL, name="diff_{}".format(self._input[0].name) )
-		return [d, d]
+		dx = Buffer( dL, name="diff_{}".format(self._input[0].name) )
+		dx = self.doSumBroadcast( dx, self._input[0].shape, dL.shape )
+
+		dy = Buffer( dL, name="diff_{}".format(self._input[1].name) )
+		dy = self.doSumBroadcast( dy, self._input[1].shape, dL.shape )
+
+		return [dx, dy]
 
 class Sum( Node ):
 
@@ -135,7 +232,7 @@ class Sum( Node ):
 		super().__init__( inputs=xs, **kwargs )
 
 	def computeShape( self, *shapes )->Tuple[int]:
-		
+
 		for shape in shapes:
 
 			for s1, s2 in zip( shape, shapes[0] ):
@@ -151,21 +248,11 @@ class Sum( Node ):
 		d = Buffer( dL, name="diff_{}".format(self._input[0].name) )
 		return [d for i in range( len( self._input ) )]
 
-class Substract( Node ):
+class Substract( ElementwiseMixin, Node ):
 
 	def __init__( self, x:GraphComponent, y:GraphComponent,
 				**kwargs ):
 		super( Substract, self ).__init__( inputs=[x, y], **kwargs )
-
-	def computeShape( self, shape1, shape2 )->Tuple[int]:
-		assert len(shape1) == len(shape2) or len(shape1)-1 == len(shape2), "Invalid shape"
-		
-		if len(shape1) == len(shape2):
-			assert shape1 == shape2, "Invalid shape"
-			return shape1
-		
-		assert shape1[1:] == shape2, "Invalid shape"
-		return shape1
 
 	def forward( self, x:np.ndarray, y:np.ndarray )->np.ndarray:
 		return x - y
@@ -177,15 +264,12 @@ class Substract( Node ):
 
 		return [d, dY]
 
-class Max( Node ):
+class Max( ElementwiseMixin, Node ):
 
 #	HACK : For create node that do derivetive of max
-	class __DiffMax( Node ):
+	class __DiffMax( ElementwiseMixin, Node ):
 		def __init__( self, x:GraphComponent, y:GraphComponent, **kwargs ):
 			super().__init__( inputs=[x,y], **kwargs )
-
-		def computeShape( self, shape:Tuple ):
-			return shape
 
 		def forward( self, x:np.ndarray, y:np.ndarray )->np.ndarray:
 			return x >= y
@@ -193,9 +277,6 @@ class Max( Node ):
 	def __init__( self, x:GraphComponent, y:GraphComponent,
 				**kwargs ):
 		super( Max, self ).__init__( inputs=[x, y], **kwargs )
-
-	def computeShape( self, shape:Tuple ):
-		return shape
 
 	def forward( self, x:np.ndarray, y:np.ndarray )->np.ndarray:
 		return np.maximum( x, y )
@@ -207,88 +288,23 @@ class Max( Node ):
 
 		return [dX, dY]
 
-# class Exponent( Node ):
+class Reshape( Node ):
 
-# 	def __init__( self, x:GraphComponent, y:GraphComponent,
-# 				**kwargs ):
-# 		super( Exponent, self ).__init__( inputs=[x, y], **kwargs )
+	def __init__( self, x:GraphComponent, shape:Tuple[int], **kwargs ):
+		self._shape = shape
+		super( Reshape, self ).__init__( inputs=[x], **kwargs )
 
-# 	def forward( self, x:np.ndarray, y:np.ndarray )->np.ndarray:
-# 		return np.power( x, y )
+	def computeShape( self, shape1 )->Tuple[int]:
+		totalElement1 = reduce((lambda x, y: x * y), shape1)
+		totalElement2 = reduce((lambda x, y: x * y), self._shape)
+		assert totalElement1 == totalElement2 or totalElement1<0 or totalElement2 < 0 
 
-# 	def backward( self, dL:np.ndarray, prevX:np.ndarray, 
-# 		prevY:np.ndarray )->List[np.ndarray]:
-
-# 		dX = np.multiply( prevY, np.power( prevX, prevY - 1 ) )
-# 		dX = np.multiply( dL, dX )
-
-# 		dY = np.multiply(np.power( prevX, prevY ), np.log( prevX ) )
-# 		dY = np.multiply( dL, dY )
-
-# 		return [dX, dY]
-
-class Sigmoid( Node ):
-
-#	HACK : For create node that do derivetive of sigmoid
-	class __DiffSigmoid( Node ):
-		def __init__( self, x:GraphComponent, **kwargs ):
-			super().__init__( inputs=[x], **kwargs )
-
-		def computeShape( self, shape:Tuple ):
-			return shape
-
-		def forward( self, x:np.ndarray )->np.ndarray:
-			
-			sig = np.power( np.e, x )
-
-			dX = np.multiply( sig, 1 - sig )
-
-			return [dX]
-
-	def __init__( self, x:GraphComponent, **kwargs ):
-		super( Sigmoid, self ).__init__( inputs=[x], **kwargs )
-
-	def computeShape( self, shape:Tuple ):
-		return shape
-
+		return self._shape
+	
 	def forward( self, x:np.ndarray )->np.ndarray:
-		return np.power( np.e, x )
+		return x.reshape( self._shape )
+	
+	def backward( self, dL:GraphComponent )->GraphComponent:
+		dx = Reshape( dL, self._input[0].shape )
 
-	def backward( self, dL:GraphComponent )->List[GraphComponent]:
-		
-		dX = Multiply( dL, self.__DiffSigmoid( self._input[0] ), name="diff_{}".format(self._input[0].name) )
-
-		return [dX]
-
-class Tanh( Node ):
-
-#	HACK : For create node that do derivetive of tanh
-	class __DiffTanh( Node ):
-		def __init__( self, x:GraphComponent, **kwargs ):
-			super().__init__( inputs=[x], **kwargs )
-
-		def computeShape( self, shape:Tuple ):
-			return shape
-
-		def forward( self, x:np.ndarray )->np.ndarray:
-			
-			tanh = np.tanh( x )
-
-			dX = 1 - np.power( tanh, 2 )
-
-			return [dX]
-
-	def __init__( self, x:GraphComponent, **kwargs ):
-		super( Tanh, self ).__init__( inputs=[x], **kwargs )
-
-	def computeShape( self, shape:Tuple ):
-		return shape
-
-	def forward( self, x:np.ndarray )->np.ndarray:
-		return np.tanh( x )
-
-	def backward( self, dL:GraphComponent )->List[GraphComponent]:
-
-		dX = Multiply( dL, self.__DiffTanh( self._input[0] ),name="diff_{}".format(self._input[0].name) )
-
-		return [dX]
+		return [dx]
