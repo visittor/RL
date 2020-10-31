@@ -26,6 +26,9 @@ class Variable( GraphComponent ):
 		assert self._output is not None, "This Variable {} isn't set value".format( self._name )
 		return super( Variable, self ).getOutput()
 
+	def setShape( self, shape:Tuple[int] ):
+		self._shape = shape
+
 	@property
 	def shape( self ):
 		return self._shape
