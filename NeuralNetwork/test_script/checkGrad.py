@@ -27,7 +27,7 @@ def checkSoftmax( ):
 	result = check_gradient( n, [x], [np.random.randn( *x.shape )] )
 
 	import pprint
-
+	print( "*********" )
 	pprint.pprint( result )
 
 def checkLoss():
@@ -43,4 +43,4 @@ def checkLoss():
 
 if __name__ == '__main__':
 
-	checkLoss()
+	checkSoftmax()

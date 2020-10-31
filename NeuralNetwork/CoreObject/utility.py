@@ -5,7 +5,9 @@ def IDGenerator( )-> int:
 		i += 1
 
 def compareShape( shape1, shape2 ):
-
+	'''
+		Compare if shape1 and shape2 are equal. -1 mean it is a wildcard.
+	'''
 	for s1, s2 in zip( shape1, shape2 ):
 		if s1 != s2 and s1 != -1 and s2 != -1:
 			return False

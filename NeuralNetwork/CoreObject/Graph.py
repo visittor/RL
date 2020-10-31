@@ -1,5 +1,7 @@
 class Graph( object ):
-
+	'''
+		Container of GraphComponents. Conveniently for accessing components by its type.
+	'''
 	def __init__( self ):
 		self.placeHolder = []
 		self.trainable = []
@@ -7,6 +9,9 @@ class Graph( object ):
 
 		self.node = []
 
+#	There can be more than one graphs per program
+#	So, we can switch it back and forth.
+#	It will use it like a name space
 _graph_lookup = { "DEFAULT":Graph() }
 
 _default_graph = _graph_lookup[ "DEFAULT" ]

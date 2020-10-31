@@ -52,6 +52,12 @@ class Relu( Activation, Node ):
 			dX = x > 0
 			return dX.astype( np.float64 )
 
+		#
+		#	HACK: since we don't use it anyway, I will not actually implement this function.
+		#
+		def backward( self, dL:np.ndarray )->np.ndarray:
+			raise NotImplementedError
+
 	def __init__( self, x:GraphComponent, **kwargs ):
 		super( Relu, self ).__init__( inputs=[x], **kwargs )
 
@@ -66,6 +72,8 @@ class Relu( Activation, Node ):
 class SoftMax( Activation, Node ):
 
 #	HACK : For create node that do derivetive of sigmoid
+
+#	NOTE : I forgot how to find derivetive of Softmax. will be came back to this later.
 	class __DiffSoftmax( Activation, Node ):
 		def __init__( self, x:GraphComponent, **kwargs ):
 			super().__init__( inputs=[x], **kwargs )
@@ -77,6 +85,12 @@ class SoftMax( Activation, Node ):
 			dx = x - dx.sum( axis = 1 )
 			# assert False
 			return dx
+
+		#
+		#	HACK: since we don't use it anyway, I will not actually implement this function.
+		#
+		def backward( self, dL:np.ndarray )->np.ndarray:
+			raise NotImplementedError
 
 	def __init__( self, x:GraphComponent, **kwargs ):
 		super( SoftMax, self ).__init__( inputs=[x], **kwargs )

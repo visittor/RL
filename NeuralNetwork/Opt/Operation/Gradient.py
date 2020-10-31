@@ -41,6 +41,12 @@ class _YGrad( Node ):
 	def forward( self, x:np.ndarray )->np.ndarray:
 		return np.ones( x.shape ) * self._val
 
+	#
+	#	Hack: since we don't use it anyway, I will not actually implement this function.
+	#
+	def backward( self, dL:np.ndarray )->np.ndarray:
+		raise NotImplementedError
+
 def gradients( yList, xList, grad_y:float = 1.0 ):
 	
 	allPath = {}
@@ -56,7 +62,6 @@ def gradients( yList, xList, grad_y:float = 1.0 ):
 	doBackwardList = []
 
 	def construct( x ):
-		print(">>", x)
 		if x in doBackwardList:
 			return
 
@@ -79,16 +84,13 @@ def gradients( yList, xList, grad_y:float = 1.0 ):
 			dL = Sum( gradDict[x] )
 
 			grads = x.backward( dL )
-		print( "**",x )
+
 		doBackwardList.append( x )
 		for i, input in enumerate( x.getInput() ):
 			gradDict.setdefault( input, [] ).append(grads[i])
 
 	for x in xList:
-		print( x )
 		construct( x )
-	
-	print( gradDict, allPath )
 
 	return [ Sum( gradDict[x], name="grad_{}".format(x.name) ) for x in xList ]
 

@@ -4,6 +4,7 @@ from .utility import IDGenerator
 
 import numpy as np
 
+#	should not be used outside this file
 _idGenerator = IDGenerator()
 
 class GraphComponent( object ):

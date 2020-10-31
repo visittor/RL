@@ -5,6 +5,9 @@ from .Variable import Variable, Constant, PlaceHolder, Trainable
 from typing import List
 
 def getGraphExecutionOrder( components: List[GraphComponent] )->List[GraphComponent]:
+	#
+	#	Basically depth first search through graph
+	#
 
 	orderedComponentsList = []
 
@@ -31,7 +34,15 @@ class Session( object ):
 		pass
 
 	def run( self, result:List[GraphComponent], feedDict = None ):
+		'''
+			Determined the value of GraphComponent in resultList.
+			feedDict is dictionary mapping between component id and
+			its value. During this function, PlaceHolder will be set it
+			value base on feedDict.
 
+			If there are PlaceHolder that not have value in feedDict and 
+			that PlaceHolder is require to determine result, raise RunTimeError.
+		'''
 		feedDict = feedDict if feedDict is not None else {}
 
 		orderedComponent = getGraphExecutionOrder( result )
@@ -49,6 +60,9 @@ class Session( object ):
 	def _handleVariable( self, var:Variable, feedDict ):
 
 		if isinstance( var, PlaceHolder ):
+
+			if var.Id not in feedDict:
+				raise RuntimeError( "{} don't have its value in feedDict.".format( var.name ) )
 
 			var.setValue( feedDict[var.Id] )
 

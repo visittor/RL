@@ -59,6 +59,12 @@ class MatMul( Node ):
 		def forward( self, x:np.ndarray )->np.ndarray:
 			return np.sum( x, axis = self._axis )
 
+		#
+		#	HACK: since we don't use it anyway, I will not actually implement this function.
+		#
+		def backward( self, dL:np.ndarray )->np.ndarray:
+			raise NotImplementedError
+
 	def __init__( self, x:GraphComponent, y:GraphComponent,
 				**kwargs ):
 		super( MatMul, self ).__init__( inputs=[x, y], **kwargs )
@@ -117,6 +123,12 @@ class ElementwiseMixin:
 
 		def forward( self, x:np.ndarray )->np.ndarray:
 			return np.sum( x, axis = self._axis )
+
+		#
+		#	HACK: since we don't use it anyway, I will not actually implement this function.
+		#
+		def backward( self, dL:np.ndarray )->np.ndarray:
+			raise NotImplementedError
 
 	def computeShape( self, shape1, shape2 )->Tuple[int]:
 		assert all( m==n or m==1 or n==1 for m,n in zip(shape1[::-1],shape2[::-1]) ), \
@@ -273,6 +285,12 @@ class Max( ElementwiseMixin, Node ):
 
 		def forward( self, x:np.ndarray, y:np.ndarray )->np.ndarray:
 			return x >= y
+
+		#
+		#	HACK: since we don't use it anyway, I will not actually implement this function.
+		#
+		def backward( self, dL:np.ndarray )->np.ndarray:
+			raise NotImplementedError
 
 	def __init__( self, x:GraphComponent, y:GraphComponent,
 				**kwargs ):
